@@ -7,9 +7,13 @@ A first working slice of a Colombo boarding-point guide. Enter a starting point 
 ```sh
 npm install
 npm run dev
+npm test
+npm run build
 ```
 
-The initial route data, travel times, fares, and boarding instructions are **illustrative demo data**. Verify all stops and route coverage on the ground before using this for real journeys. GPS needs browser location permission and a secure context (localhost works).
+The app currently has a sample corridor with selectable drop-off stops, preset starting places, GPS, and map-click origin selection. It recommends an option based on estimated time and cost, with separate fastest and cheapest sorting.
+
+The route, stop coordinates, fares, and times are **illustrative demo data**. The dashed map line is a sample corridor, not a verified bus path. Estimates use fixed walking, tuk, and bus speeds plus an assumed eight-minute wait. There is no live bus data, street-level walking route, tuk booking, or Supabase connection yet. Verify stops and route coverage on the ground before using this for real journeys. GPS needs browser location permission and a secure context (localhost works).
 
 ## Branches and commits
 
