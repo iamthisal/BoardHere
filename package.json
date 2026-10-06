@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^0.577.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0"
@@ -22,5 +23,8 @@
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "~5.7.3",
     "vite": "^6.0.0"
+  },
+  "overrides": {
+    "rollup": "4.63.6"
   }
 }
