@@ -5,7 +5,7 @@ import { AlertCircle, ArrowRight, BusFront, Check, Clock3, Crosshair, Footprints
 import 'leaflet/dist/leaflet.css'
 import './style.css'
 import { demoRoutes, places } from './demoData'
-import { planJourneys, rankJourneys, type Journey, type Point, type SortMode } from './planner'
+import { distanceKm, planJourneys, rankJourneys, type Journey, type Point, type SortMode } from './planner'
 
 const dropStops = demoRoutes[0].stops.slice(1)
 const minutesLabel = (minutes: number) => minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`
@@ -38,6 +38,7 @@ function App() {
   const [locating, setLocating] = useState(false)
   const journeys = useMemo(() => rankJourneys(planJourneys(origin, dropId, demoRoutes), sortMode), [origin, dropId, sortMode])
   const selected = journeys.find((journey) => journey.id === selectedId) ?? journeys[0]
+  const atDropStop = dropStops.some((stop) => stop.id === dropId && distanceKm(origin, stop) <= 0.15)
 
   function choosePlace(id: string) {
     const place = places.find((item) => item.id === id)
@@ -97,10 +98,10 @@ function App() {
           </select></div>
         </section>
         <section className="results" aria-label="Journey options">
-          <div className="results-title"><div><span className="eyebrow">YOUR OPTIONS</span><h2>{journeys.length ? 'Ways to board' : 'No nearby boarding options'}</h2></div><span className="option-count">{journeys.length} found</span></div>
+          <div className="results-title"><div><span className="eyebrow">YOUR OPTIONS</span><h2>{atDropStop ? 'You are already there' : journeys.length ? 'Ways to board' : 'No nearby boarding options'}</h2></div><span className="option-count">{journeys.length} found</span></div>
           {journeys.length > 0 && <div className="sort-control" role="group" aria-label="Sort journeys">{(['recommended', 'fastest', 'cheapest'] as const).map((mode) => <button key={mode} type="button" aria-pressed={sortMode === mode} className={sortMode === mode ? 'active' : ''} onClick={() => { setSortMode(mode); setSelectedId(null) }}>{mode === 'recommended' ? 'Best fit' : mode === 'fastest' ? 'Fastest' : 'Cheapest'}</button>)}</div>}
           {journeys.length > 0 && <p className="ranking-note">{sortMode === 'recommended' ? 'Recommended for its balance of time and estimated cost.' : sortMode === 'fastest' ? 'Shortest estimated total travel time first.' : 'Lowest estimated total cost first.'}</p>}
-          {journeys.length === 0 && <p className="empty-state">Try a starting point closer to the sample corridor. Choose a place above or tap the map.</p>}
+          {journeys.length === 0 && <p className="empty-state">{atDropStop ? 'Your starting point is at the selected drop-off stop.' : 'Try a starting point closer to the sample corridor. Choose a place above or tap the map.'}</p>}
           <div className="option-list">{journeys.slice(0, 4).map((journey, index) => <button key={journey.id} type="button" className={`option ${selected?.id === journey.id ? 'selected' : ''}`} onClick={() => setSelectedId(journey.id)} aria-pressed={selected?.id === journey.id}>
             <div className="option-heading"><span className={`mode-icon ${journey.mode}`}>{journey.mode === 'walk' ? <Footprints size={18} /> : <Navigation size={18} />}</span><div className="option-name"><strong>{journey.mode === 'walk' ? 'Walk' : 'Tuk'} to {journey.board.name}</strong><span>Then board the sample bus</span></div>{index === 0 && <span className="recommend-label"><Check size={12} />{sortMode === 'recommended' ? 'Recommended' : sortMode === 'fastest' ? 'Fastest' : 'Cheapest'}</span>}</div>
             <div className="option-metrics"><div><Clock3 size={15} /><strong>{minutesLabel(journey.totalMinutes)}</strong><span>total</span></div><div><Wallet size={15} /><strong>Rs {journey.totalCostLkr}</strong><span>estimate</span></div></div>

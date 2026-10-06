@@ -20,6 +20,10 @@ test('origins beyond access limits have no boarding option', () => {
   assert.deepEqual(planJourneys({ lat: 7.3, lng: 80.2 }, 'c', routes), [])
 })
 
+test('already being at the drop-off stop does not suggest a bus', () => {
+  assert.deepEqual(planJourneys(stops[2], 'c', routes), [])
+})
+
 test('fastest and cheapest ranking can choose different access modes', () => {
   const origin = { lat: 6.91, lng: 79.86 }
   const journeys = planJourneys(origin, 'c', routes)

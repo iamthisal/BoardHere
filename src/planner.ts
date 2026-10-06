@@ -39,6 +39,7 @@ export function planJourneys(origin: Point, dropId: string, routes: Route[]): Jo
   for (const route of routes) {
     const dropIndex = route.stops.findIndex((stop) => stop.id === dropId)
     if (dropIndex < 1) continue
+    if (distanceKm(origin, route.stops[dropIndex]) <= 0.15) continue
 
     for (let index = 0; index < dropIndex; index += 1) {
       const board = route.stops[index]
