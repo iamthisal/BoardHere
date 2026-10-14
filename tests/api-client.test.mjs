@@ -21,3 +21,12 @@ test('API client explains network failure', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => { throw new TypeError('network') })
   await assert.rejects(createApiClient('').stops(), /backend is running/)
 })
+
+test('crowd report includes bus leg and selected as-of time', async(t)=>{
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    assert.equal(url,'http://localhost:8000/crowd-reports')
+    assert.deepEqual(JSON.parse(init.body),{leg_id:'bus',crowd_level:'packed',reported_at:'2026-10-14T08:00:00+05:30'})
+    return new Response('{}',{status:201})
+  })
+  await createApiClient('http://localhost:8000').report('bus','packed','2026-10-14T08:00:00+05:30')
+})

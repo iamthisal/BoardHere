@@ -1,10 +1,11 @@
 import { BusFront, Check, Clock3, Footprints, Navigation, Wallet } from 'lucide-react'
-import type { Option } from './api'
+import type { Option, CrowdLevel } from './api'
 import { EstimateBadge, estimatedArrival } from './EstimateBadge'
+import { CrowdButtons } from './CrowdButtons'
 
 export const crowdLabel = (level: string) => ({seats_free:'Seats likely',standing:'Standing',packed:'Packed',not_applicable:'Not applicable'}[level] || level)
 
-export function OptionCard({option, selected, recommended, onSelect, now}: {option:Option; selected:boolean; recommended:boolean; onSelect:()=>void;now?:string}) {
+export function OptionCard({option, selected, recommended, onSelect, now,onReport}: {option:Option; selected:boolean; recommended:boolean; onSelect:()=>void;now?:string;onReport?:(legId:string,level:CrowdLevel)=>Promise<void>}) {
   return <article className={`option ${selected?'selected':''}`} data-option-id={option.id}>
     <EstimateBadge bucket={option.bucket}/>
     <button className="option-select" type="button" onClick={onSelect} aria-pressed={selected}>
@@ -22,6 +23,7 @@ export function OptionCard({option, selected, recommended, onSelect, now}: {opti
     {now && <p className="arrival-note">Estimated arrival: {estimatedArrival(now,option.time_minutes)} (Sri Lanka)</p>}
     <p className="option-explanation">{option.explanation}</p>
     {selected && <><ol className="journey-legs">{option.legs.map(leg=><li key={leg.id}>{leg.mode==='bus'?<BusFront size={15}/>:leg.mode==='walk'?<Footprints size={15}/>:<Navigation size={15}/>}<span>{leg.mode==='taxi'?'PickMe / tuk':leg.mode==='bus'?'Bus':'Walk'} to {leg.to_stop.name}<small>{leg.in_vehicle_minutes.toFixed(1)} min travel + {leg.wait_minutes.toFixed(1)} min wait, LKR {leg.cost_lkr.toFixed(0)} (estimated)</small></span></li>)}</ol>
-    <details className="score-details"><summary>Score breakdown (estimated)</summary><table><thead><tr><th>Criterion</th><th>Normalized</th><th>Weight</th><th>Contribution</th></tr></thead><tbody>{Object.entries(option.score_breakdown).map(([name,c])=><tr key={name}><th>{name}</th><td>{c.normalized.toFixed(3)}</td><td>{c.weight.toFixed(2)}</td><td>{c.contribution.toFixed(3)}</td></tr>)}</tbody></table><p>Total weighted score: {option.score.toFixed(3)} (estimated)</p></details></>}
+    <details className="score-details"><summary>Score breakdown (estimated)</summary><table><thead><tr><th>Criterion</th><th>Normalized</th><th>Weight</th><th>Contribution</th></tr></thead><tbody>{Object.entries(option.score_breakdown).map(([name,c])=><tr key={name}><th>{name}</th><td>{c.normalized.toFixed(3)}</td><td>{c.weight.toFixed(2)}</td><td>{c.contribution.toFixed(3)}</td></tr>)}</tbody></table><p>Total weighted score: {option.score.toFixed(3)} (estimated)</p></details>
+    {onReport && option.legs.filter(l=>l.mode==='bus').map(l=><div key={l.id}><p className="report-leg-label">Bus to {l.to_stop.name}</p><CrowdButtons legId={l.id} onReport={onReport}/></div>)}</>}
   </article>
 }

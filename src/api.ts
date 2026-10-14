@@ -1,5 +1,6 @@
 export type Point = { lat: number; lng: number }
 export type Preference = 'cheapest' | 'fastest' | 'comfortable'
+export type CrowdLevel = 'seats_free' | 'standing' | 'packed'
 export type Stop = Point & { id: string; slug: string; name: string; kind: 'origin' | 'boarding' | 'destination'; data_status: string; source: string }
 export type Leg = { id: string; mode: 'walk' | 'taxi' | 'bus'; from_stop_id: string | null; to_stop: Stop; cost_lkr: number; in_vehicle_minutes: number; wait_minutes: number; walk_km: number; crowd_level: string; crowd_source: string; data_status: string }
 export type Criterion = { raw: number; normalized: number; weight: number; contribution: number }
@@ -23,6 +24,7 @@ export function createApiClient(baseUrl: string) {
     return response.json() as Promise<T>
   }
   return {
+    report: (leg_id:string,crowd_level:CrowdLevel,reported_at:string) => request('/crowd-reports', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leg_id,crowd_level,reported_at})}),
     stops: (signal?: AbortSignal) => request<Stop[]>('/stops', { signal }),
     recommend: (input: RecommendInput, signal?: AbortSignal) => request<Recommendation>('/recommend', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal,

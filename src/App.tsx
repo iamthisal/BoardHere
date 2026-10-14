@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, BusFront, Crosshair, MapPin, RefreshCw } from 'lucide-react'
-import { createApiClient, type Recommendation, type Stop } from './api'
+import { createApiClient, type Recommendation, type Stop, type CrowdLevel } from './api'
 import { buildInput, type QueryForm } from './query'
 import { QueryControls } from './QueryControls'
 import { JourneyMap } from './JourneyMap'
@@ -19,6 +19,7 @@ export function App() {
   const [retry, setRetry] = useState(0)
   const [gpsError, setGpsError] = useState('')
   const [locating, setLocating] = useState(false)
+  const [reportNotice,setReportNotice]=useState('')
   const change = (update: Partial<QueryForm>) => setForm(previous => ({...previous,...update}))
   useEffect(() => {
     const controller = new AbortController()
@@ -49,6 +50,11 @@ export function App() {
     navigator.geolocation.getCurrentPosition(({coords}) => {change({lat:coords.latitude,lng:coords.longitude});setLocating(false)}, () => {setGpsError('Location permission denied or unavailable. Choose a starting place.');setLocating(false)}, {timeout:10000})
   }
   const selected = result?.options.find(o => o.id === selectedId) ?? result?.options[0]
+  async function report(legId:string,level:CrowdLevel) {
+    if (!result) return
+    await api.report(legId,level,result.now)
+    setReportNotice('Unverified report saved for the selected journey time.');setRetry(v=>v+1)
+  }
   return <div className="app-shell"><aside className="sidebar">
     <header className="topbar"><div className="brand-mark"><BusFront size={22}/></div><div className="brand-text"><strong>BoardHere</strong><span>Find your best boarding point</span></div><span className="demo-tag">DEMO</span></header>
     <div className="sidebar-scroll"><div className="intro"><h1>Where should you board?</h1></div>
@@ -57,8 +63,9 @@ export function App() {
       {gpsError && <p role="alert" className="error">{gpsError}</p>}
       <QueryControls form={form} stops={stops} onChange={change}/>
       <section className="results" aria-label="Journey options"><h2>Ways to board</h2>
+        {reportNotice && <p className="report-notice" role="status">{reportNotice}</p>}
         <RequestState loading={loading} error={error} empty={!result?.options.length} message={result?.message} onRetry={()=>setRetry(v=>v+1)}/>
-        <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)}/>)}</div>
+        <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)} onReport={report}/>)}</div>
       </section>
     </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(point)}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
 }

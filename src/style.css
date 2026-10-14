@@ -68,6 +68,12 @@ button:disabled { cursor: wait; opacity: .65; }
 .estimate-badge strong { padding:3px 5px; background:#fff3d6; border-radius:3px; font-weight:600; }
 .estimate-badge span { padding:3px 0; }
 .arrival-note { font-size:11px; color:#536a5d; }
+.crowd-report { border-top:1px solid #e1e8e2; padding:10px 0; font-size:11px; }
+.crowd-buttons { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0; }
+.crowd-buttons button { display:flex; align-items:center; gap:4px; border:1px solid #c8d9ce; padding:6px; border-radius:4px; background:#f5f9f6; color:#316f54; font-size:10px; }
+.crowd-report small { display:block; line-height:1.5; }
+.crowd-report [role="alert"] { color:#a3422c; }
+.report-leg-label,.report-notice { font-size:11px; color:#367b67; }
 .option { width: 100%; padding: 14px 14px 0; text-align: left; border: 1px solid #dfe7e1; background: #fff; border-radius: 7px; color: inherit; overflow: hidden; }
 .option:hover { border-color: #91b9a5; }
 .option.selected { border: 2px solid #3b9174; padding: 13px 13px 0; box-shadow: 0 2px 8px #1e6a4c12; }
