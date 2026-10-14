@@ -5,8 +5,11 @@ from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
 from .models import RecommendRequest, Origin, Preference
 from .recommendation import recommend
+from .config import cors_origins
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="BoardHere", description="Local estimated (rule-based) journey recommendations")
+app.add_middleware(CORSMiddleware, allow_origins=cors_origins(), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 
 
 @app.exception_handler(DatabaseError)
