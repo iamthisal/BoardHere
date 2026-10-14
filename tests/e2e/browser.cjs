@@ -22,6 +22,7 @@ async function main() {
     assert.ok(await page.locator('.sidebar-scroll').evaluate(el=>el.scrollHeight>el.clientHeight))
     assert.equal(await page.locator('[data-option-id]').count(),4)
     assert.ok(await page.locator('.leaflet-overlay-pane path').count()>0)
+    await page.locator('.coordinate-details summary').click()
     const originSearch=page.getByRole('combobox',{name:'Starting place'})
     await originSearch.fill('BORELLA')
     await page.getByRole('option',{name:/Borella transfer point/}).waitFor()
@@ -103,6 +104,14 @@ async function main() {
     await page.getByText('No eligible options in the estimated demo coverage, or already at the drop-off stop.').waitFor()
     assert.equal(await page.locator('[data-option-id]').count(),0)
 
+    const tablet = await context.newPage()
+    await tablet.setViewportSize({width:768,height:1024})
+    await tablet.goto(process.env.FRONTEND_URL || 'http://localhost:5173/')
+    await tablet.locator('[data-option-id]').first().waitFor()
+    assert.ok(await tablet.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth))
+    assert.ok(await tablet.locator('.leaflet-overlay-pane path').count()>=3)
+    await tablet.screenshot({path:'.qa/screenshots/tablet-web.png',fullPage:true})
+
     const narrow = await context.newPage()
     await narrow.setViewportSize({width:390,height:844})
     await narrow.goto(process.env.FRONTEND_URL || 'http://localhost:5173/')
@@ -114,8 +123,8 @@ async function main() {
     await narrow.locator('.map-panel').screenshot({path:'.qa/screenshots/narrow-map.png'})
     await narrow.screenshot({path:'.qa/screenshots/narrow-web.png',fullPage:true})
     assert.deepEqual(errors,[])
-    fs.writeFileSync('.qa/browser-results.json',JSON.stringify({matrix,searchableStops:true,walkRide:true,emptyErrorRetry:true,crowdReport:true,consoleErrors:errors},null,2))
-    console.log('Browser checks passed: searchable stops, 9 preference/time combinations, walk/ride/deadline, reporting, empty/error/retry, map overlays and narrow-web layout.')
+    fs.writeFileSync('.qa/browser-results.json',JSON.stringify({matrix,searchableStops:true,walkRide:true,emptyErrorRetry:true,crowdReport:true,responsiveLayouts:true,consoleErrors:errors},null,2))
+    console.log('Browser checks passed: searchable stops, 9 preference/time combinations, walk/ride/deadline, reporting, empty/error/retry, map overlays, and tablet/mobile layouts.')
   } finally {
     await browser.close()
     for(const id of reports) {

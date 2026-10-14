@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Search, X } from 'lucide-react'
+import { Check, Flag, MapPin, Search, X } from 'lucide-react'
 import type { Stop } from './api'
 
 export function filterStops(stops: Stop[], query: string): Stop[] {
@@ -22,9 +22,10 @@ type Props = {
   loading?: boolean
   onSelect: (stop: Stop) => void
   onClear: () => void
+  marker?: 'origin' | 'destination'
 }
 
-export function SearchableStopCombobox({id,label,placeholder,stops,selected,loading=false,onSelect,onClear}: Props) {
+export function SearchableStopCombobox({id,label,placeholder,stops,selected,loading=false,onSelect,onClear,marker}: Props) {
   const [query,setQuery]=useState(selected?.name ?? '')
   const [open,setOpen]=useState(false)
   const [active,setActive]=useState(-1)
@@ -51,7 +52,7 @@ export function SearchableStopCombobox({id,label,placeholder,stops,selected,load
   }
 
   return <div className="stop-field" ref={root}>
-    <label htmlFor={id}>{label}</label>
+    <label htmlFor={id} className="stop-label">{marker==='origin'?<MapPin size={15}/>:marker==='destination'?<Flag size={15}/>:null}<span>{label}</span></label>
     <div className={`stop-combobox ${open?'open':''}`}>
       <Search size={16} aria-hidden="true"/>
       <input id={id} type="search" value={query} placeholder={placeholder} autoComplete="off"

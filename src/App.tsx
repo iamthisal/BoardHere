@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, BusFront, Crosshair, MapPin, RefreshCw } from 'lucide-react'
+import { AlertCircle, BusFront, CheckCircle2, MapPin, RefreshCw, Route } from 'lucide-react'
 import { createApiClient, type Recommendation, type Stop, type CrowdLevel } from './api'
 import { buildInput, coordinateOriginUpdate, type QueryForm } from './query'
 import { QueryControls } from './QueryControls'
@@ -56,16 +56,15 @@ export function App() {
     setReportNotice('Unverified report saved for the selected journey time.');setRetry(v=>v+1)
   }
   return <div className="app-shell"><aside className="sidebar">
-    <header className="topbar"><div className="brand-mark"><BusFront size={22}/></div><div className="brand-text"><strong>BoardHere</strong><span>Find your best boarding point</span></div><span className="demo-tag">DEMO</span></header>
-    <div className="sidebar-scroll"><div className="intro"><h1>Where should you board?</h1></div>
-      <div className="notice"><AlertCircle size={16}/><span>Estimated demo data. Stops, fares and travel times are unverified.</span></div>
-      <div className="origin-actions"><button className="text-button" type="button" onClick={gps} disabled={locating}><Crosshair size={16}/>{locating?'Locating...':'Use my location'}</button><button className="icon-button" title="Refresh journey" aria-label="Refresh journey" onClick={() => setRetry(v=>v+1)}><RefreshCw size={16}/></button></div>
-      {gpsError && <p role="alert" className="error">{gpsError}</p>}
-      <QueryControls form={form} stops={stops} onChange={change}/>
-      <section className="results" aria-label="Journey options"><h2>Ways to board</h2>
-        {reportNotice && <p className="report-notice" role="status">{reportNotice}</p>}
+    <header className="topbar"><div className="brand-mark"><BusFront size={22}/></div><div className="brand-text"><strong>BoardHere</strong><span>Smarter ways to board</span></div><span className="demo-tag">ESTIMATED DEMO</span></header>
+    <div className="sidebar-scroll"><div className="intro"><span className="eyebrow">Journey planner</span><h1>Find a better way there.</h1><p>Compare estimated ride, bus and walking options from your starting point.</p></div>
+      <div className="notice"><AlertCircle size={16}/><span><strong>Demo estimates only.</strong> Stops, fares, routes and travel times are unverified.</span></div>
+      <QueryControls form={form} stops={stops} onChange={change} onLocate={gps} locating={locating} gpsError={gpsError}/>
+      <section className="results" aria-label="Journey options"><div className="results-heading"><div><span className="eyebrow">Your options</span><h2>Ways to make this trip</h2></div><div className="results-actions">{loading&&<span className="updating"><span/>Updating</span>}<button className="icon-button" title="Refresh journey" aria-label="Refresh journey" onClick={()=>setRetry(v=>v+1)}><RefreshCw size={16}/></button></div></div>
+        {result?.options.length?<p className="results-summary"><Route size={14}/>{result.options.length} estimated routes · ranked for {result.preference}</p>:null}
+        {reportNotice && <p className="report-notice" role="status"><CheckCircle2 size={15}/>{reportNotice}</p>}
         <RequestState loading={loading} error={error} empty={!result?.options.length} message={result?.message} onRetry={()=>setRetry(v=>v+1)}/>
         <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)} onReport={report}/>)}</div>
       </section>
-    </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(coordinateOriginUpdate(point))}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
+    </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(coordinateOriginUpdate(point))}/><div className="map-hint"><MapPin size={15}/><span><strong>Estimated schematic</strong><small>Tap map to move your start</small></span></div></main></div>
 }
