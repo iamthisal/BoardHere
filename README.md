@@ -36,7 +36,10 @@ Start the local PostgreSQL database with Docker Desktop running:
 
 ```sh
 docker compose up -d --wait db
+npm run db:seed
 npm run test:database
 ```
 
 The SQL migration in `database/migrations/` initializes the route catalog in an empty Docker volume. It is not connected to the frontend yet. See [database and backend direction](docs/database.md) for connection details, the schema, and the planned Python FastAPI API.
+
+`db:seed` applies pending migrations to the existing local database and upserts the demo fixtures. It can be rerun without duplicating rows. Every fixture value is estimated and unverified; no seed row is a verified transport service or a live PickMe quote.
