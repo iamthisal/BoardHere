@@ -2,6 +2,33 @@ from datetime import datetime
 from .time_model import get_time_bucket
 
 CROWD = {'not_applicable': 0.0, 'seats_free': 0.0, 'standing': 0.5, 'packed': 1.0}
+WEIGHTS = {
+    'cheapest': {'cost': .6, 'time': .15, 'crowd': .1, 'walk': .15},
+    'fastest': {'cost': .15, 'time': .6, 'crowd': .1, 'walk': .15},
+    'comfortable': {'cost': .1, 'time': .2, 'crowd': .45, 'walk': .25},
+}
+CRITERIA = {'cost': 'cost_lkr', 'time': 'time_minutes', 'crowd': 'crowd_value', 'walk': 'walk_km'}
+
+
+def rank_options(options: list[dict], preference: str) -> list[dict]:
+    weights = WEIGHTS[preference]
+    if not options:
+        return []
+    bounds = {criterion: (min(o[field] for o in options), max(o[field] for o in options))
+              for criterion, field in CRITERIA.items()}
+    ranked = []
+    for option in options:
+        breakdown = {}
+        score = 0.0
+        for criterion, field in CRITERIA.items():
+            low, high = bounds[criterion]
+            normalized = (option[field] - low) / (high - low) if high > low else 0.0
+            contribution = normalized * weights[criterion]
+            score += contribution
+            breakdown[criterion] = {'raw': option[field], 'normalized': round(normalized, 6),
+                'weight': weights[criterion], 'contribution': round(contribution, 6)}
+        ranked.append({**option, 'score': round(score, 6), 'score_breakdown': breakdown})
+    return sorted(ranked, key=lambda option: (option['score'], option['id']))
 
 
 def estimate_options(catalog: dict, now: datetime) -> list[dict]:
