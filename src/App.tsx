@@ -4,6 +4,7 @@ import { createApiClient, type Recommendation, type Stop } from './api'
 import { buildInput, type QueryForm } from './query'
 import { QueryControls } from './QueryControls'
 import { JourneyMap } from './JourneyMap'
+import { OptionCard } from './OptionCard'
 
 const api = createApiClient(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
 
@@ -54,7 +55,7 @@ export function App() {
       <section className="results" aria-label="Journey options"><h2>Ways to board</h2>
         {loading && <p role="status">Finding journey options...</p>}
         {error && <p role="alert" className="error">{error}</p>}
-        {result?.options.map(o => <button className="option" key={o.id} onClick={()=>setSelectedId(o.id)}>{o.title}: LKR {o.cost_lkr} estimated, {o.time_minutes.toFixed(1)} min estimated</button>)}
+        <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} onSelect={()=>setSelectedId(o.id)}/>)}</div>
       </section>
     </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(point)}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
 }

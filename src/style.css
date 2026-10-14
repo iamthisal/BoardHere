@@ -45,6 +45,22 @@ button:disabled { cursor: wait; opacity: .65; }
 .sort-control button.active { background: #fff; color: #216c55; box-shadow: 0 1px 4px #213c2d20; }
 .ranking-note { margin: -2px 0 12px; font-size: 10px; color: #819088; }
 .option-list { display: grid; gap: 10px; }
+.option-select { border:0; background:transparent; padding:0; width:100%; color:inherit; text-align:left; }
+.journey-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:15px 0; }
+.journey-metrics dt { display:flex; align-items:center; gap:5px; color:#607469; font-size:11px; }
+.journey-metrics dd { margin:4px 0 0; font-size:13px; font-weight:600; }
+.journey-metrics small { display:block; font-size:10px; color:#67786f; font-weight:400; }
+.budget-note { color:#287355; font-size:11px; }
+.budget-note.late { color:#ad492f; }
+.option-explanation { font-size:12px; line-height:1.6; color:#56675e; }
+.journey-legs { list-style:none; padding:0; border-top:1px solid #e7ece8; }
+.journey-legs li { display:flex; gap:8px; padding-top:12px; font-size:12px; }
+.journey-legs svg { flex:none; color:#367b67; margin-top:2px; }
+.journey-legs small { display:block; color:#65776b; line-height:1.6; font-size:10px; }
+.score-details { padding:12px 0; font-size:11px; border-top:1px solid #e7ece8; }
+.score-details summary { cursor:pointer; color:#287355; }
+.score-details table { margin-top:10px; width:100%; table-layout:fixed; border-collapse:collapse; }
+.score-details th,.score-details td { font-size:10px; padding:6px 2px; text-align:left; overflow-wrap:anywhere; }
 .option { width: 100%; padding: 14px 14px 0; text-align: left; border: 1px solid #dfe7e1; background: #fff; border-radius: 7px; color: inherit; overflow: hidden; }
 .option:hover { border-color: #91b9a5; }
 .option.selected { border: 2px solid #3b9174; padding: 13px 13px 0; box-shadow: 0 2px 8px #1e6a4c12; }
