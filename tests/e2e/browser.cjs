@@ -44,6 +44,20 @@ async function main() {
     await destinationSearch.fill('Maharagama')
     await destinationSearch.press('ArrowDown');await destinationSearch.press('Enter')
     assert.equal((await maharagamaResponse).status(),200)
+    for (const [query,slug] of [['Nugegoda','nugegoda'],['Kottawa','kottawa'],['Colombo Fort','colombo-fort'],['Battaramulla','battaramulla'],['Kaduwela','kaduwela']]) {
+      const responsePromise=page.waitForResponse(r=>r.url().endsWith('/recommend') && r.request().postDataJSON()?.destination===slug)
+      await destinationSearch.fill(query)
+      await page.getByRole('option',{name:new RegExp(`${query} drop-off`,'i')}).click()
+      const response=await responsePromise
+      assert.equal(response.status(),200)
+      assert.equal((await response.json()).options.length,4)
+      await page.locator('[data-option-id]').first().waitFor()
+      assert.ok(await page.locator('.leaflet-overlay-pane path').count()>=1)
+    }
+    const returnResponse=page.waitForResponse(r=>r.url().endsWith('/recommend') && r.request().postDataJSON()?.destination==='maharagama')
+    await destinationSearch.fill('Maharagama')
+    await destinationSearch.press('ArrowDown');await destinationSearch.press('Enter')
+    assert.equal((await returnResponse).status(),200)
     fs.mkdirSync('.qa/screenshots',{recursive:true})
     await page.screenshot({path:'.qa/screenshots/desktop-controls.png'})
     for (const time of ['08:00','14:00','17:00']) {
@@ -123,8 +137,8 @@ async function main() {
     await narrow.locator('.map-panel').screenshot({path:'.qa/screenshots/narrow-map.png'})
     await narrow.screenshot({path:'.qa/screenshots/narrow-web.png',fullPage:true})
     assert.deepEqual(errors,[])
-    fs.writeFileSync('.qa/browser-results.json',JSON.stringify({matrix,searchableStops:true,walkRide:true,emptyErrorRetry:true,crowdReport:true,responsiveLayouts:true,consoleErrors:errors},null,2))
-    console.log('Browser checks passed: searchable stops, 9 preference/time combinations, walk/ride/deadline, reporting, empty/error/retry, map overlays, and tablet/mobile layouts.')
+    fs.writeFileSync('.qa/browser-results.json',JSON.stringify({matrix,searchableStops:true,expandedDestinations:true,walkRide:true,emptyErrorRetry:true,crowdReport:true,responsiveLayouts:true,consoleErrors:errors},null,2))
+    console.log('Browser checks passed: all destinations, searchable stops, 9 preference/time combinations, walk/ride/deadline, reporting, empty/error/retry, map overlays, and tablet/mobile layouts.')
   } finally {
     await browser.close()
     for(const id of reports) {
