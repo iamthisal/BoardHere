@@ -72,6 +72,16 @@ def estimate_options(catalog: dict, now: datetime, origin: dict | None = None) -
             if profile is None:
                 raise ValueError(f"Missing time profile for {raw['id']} / {bucket}")
             report = reports.get(raw['id']) if raw['mode'] == 'bus' else None
+            cost = float(raw['cost_lkr'])
+            if raw['mode'] == 'bus':
+                positions = [s for s in catalog['route_stops'] if str(s['pattern_id']) == str(raw['pattern_id'])]
+                starts = [s['sequence'] for s in positions if str(s['stop_id']) == str(raw['from_stop_id']) and s['can_board']]
+                ends = [s['sequence'] for s in positions if str(s['stop_id']) == str(raw['to_stop_id']) and s['can_alight']]
+                fare = next((f for f in catalog['fares'] if str(f['pattern_id']) == str(raw['pattern_id'])
+                    and f['board_sequence'] in starts and f['drop_sequence'] in ends and f['board_sequence'] < f['drop_sequence']), None)
+                if fare is None:
+                    raise ValueError(f"Missing fare or direction for {raw['id']}")
+                cost = float(fare['amount_lkr'])
             vehicle = float(raw['base_minutes']) * float(profile['in_vehicle_multiplier'])
             walk_km = 0.0
             if raw['mode'] == 'walk':
@@ -86,7 +96,7 @@ def estimate_options(catalog: dict, now: datetime, origin: dict | None = None) -
                 'id': raw['id'], 'mode': raw['mode'], 'from_stop_id': str(raw['from_stop_id']) if raw['from_stop_id'] else None,
                 'to_stop': {**stops[str(raw['to_stop_id'])], 'id': str(raw['to_stop_id'])},
                 'pattern_id': str(raw['pattern_id']) if raw['pattern_id'] else None,
-                'cost_lkr': float(raw['cost_lkr']), 'in_vehicle_minutes': round(vehicle, 2),
+                'cost_lkr': cost, 'service_label': raw.get('service_label'), 'in_vehicle_minutes': round(vehicle, 2),
                 'wait_minutes': float(profile['wait_minutes']), 'walk_km': round(walk_km, 3),
                 'crowd_level': report['crowd_level'] if report else profile['crowd_level'],
                 'crowd_source': 'Unverified passenger report (estimated)' if report else 'estimated (rule-based)',

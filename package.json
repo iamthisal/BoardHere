@@ -4,11 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "test:database": "node --test tests/database/*.test.mjs",
     "test:web": "node scripts/test-web.mjs",
+    "setup:browser": "node scripts/setup-browser.mjs",
+    "test:e2e": "node tests/e2e/browser.cjs",
     "db:seed": "node scripts/seed-db.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
