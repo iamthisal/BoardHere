@@ -1,6 +1,9 @@
 import type { Preference, RecommendInput } from './api'
 
-export type QueryForm = { lat: number; lng: number; destination: string; preference: Preference; minutes: number; overrideTime: boolean; time: string }
+export type QueryForm = { lat: number; lng: number; originStopId?: string; destination: string; preference: Preference; minutes: number; overrideTime: boolean; time: string }
+export function coordinateOriginUpdate(point: Partial<Pick<QueryForm,'lat'|'lng'>>): Partial<QueryForm> {
+  return {originStopId:undefined,...point}
+}
 export function buildInput(form: QueryForm): RecommendInput {
   if (!Number.isFinite(form.lat) || !Number.isFinite(form.lng) || Math.abs(form.lat) > 90 || Math.abs(form.lng) > 180) throw new Error('Enter valid starting coordinates.')
   if (!Number.isInteger(form.minutes) || form.minutes < 1 || form.minutes > 1440) throw new Error('Available minutes must be from 1 to 1440.')

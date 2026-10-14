@@ -21,14 +21,17 @@ function MapEvents({ origin, option, onPick }: { origin: Point; option?: Option;
 
 export function JourneyMap({origin, option, onPick}: {origin: Point; option?: Option; onPick: (point: Point) => void}) {
   const validOrigin = Number.isFinite(origin.lat) && Number.isFinite(origin.lng) && Math.abs(origin.lat)<=90 && Math.abs(origin.lng)<=180 ? origin : {lat:6.952,lng:79.879}
-  return <MapContainer center={[6.90,79.89]} zoom={11} scrollWheelZoom={false} className="map">
+  return <><MapContainer center={[6.90,79.89]} zoom={11} scrollWheelZoom={false} className="map">
     <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
     <MapEvents origin={validOrigin} option={option} onPick={onPick}/>
-    <CircleMarker center={[validOrigin.lat,validOrigin.lng]} radius={8} pathOptions={{color:'#fff',fillColor:'#28342f',fillOpacity:1}}><Popup>Your starting point</Popup></CircleMarker>
+    <CircleMarker center={[validOrigin.lat,validOrigin.lng]} radius={9} weight={3} pathOptions={{color:'#fff',fillColor:'#173f35',fillOpacity:1}}><Popup><strong>Start</strong><br/>Tap the map to move this point</Popup></CircleMarker>
     {option?.legs.map((leg,index) => {
       const start = index === 0 ? validOrigin : option.legs[index-1].to_stop
-      const color = leg.mode === 'walk' ? '#dfa337' : leg.mode === 'taxi' ? '#d96045' : '#367b67'
-      return <Fragment key={leg.id}><Polyline positions={[[start.lat,start.lng],[leg.to_stop.lat,leg.to_stop.lng]]} pathOptions={{color,weight:4,dashArray:'7 6'}}/><CircleMarker center={[leg.to_stop.lat,leg.to_stop.lng]} radius={7} pathOptions={{color:'#fff',fillColor:color,fillOpacity:1}}><Popup>{leg.to_stop.name} (estimated location)</Popup></CircleMarker></Fragment>
+      const color = leg.mode === 'walk' ? '#d18a19' : leg.mode === 'taxi' ? '#d85e45' : '#21745c'
+      const final=index===option.legs.length-1
+      const markerColor=final?'#173f35':color
+      const dashArray=leg.mode==='walk'?'3 7':leg.mode==='taxi'?'10 7':undefined
+      return <Fragment key={leg.id}><Polyline positions={[[start.lat,start.lng],[leg.to_stop.lat,leg.to_stop.lng]]} pathOptions={{color,weight:5,dashArray,lineCap:'round'}}/><CircleMarker center={[leg.to_stop.lat,leg.to_stop.lng]} radius={final?9:7} weight={3} pathOptions={{color:'#fff',fillColor:markerColor,fillOpacity:1}}><Popup><strong>{final?'Destination':'Boarding / transfer'}</strong><br/>{leg.to_stop.name}<br/><small>Estimated location</small></Popup></CircleMarker></Fragment>
     })}
-  </MapContainer>
+  </MapContainer><div className="map-legend" aria-label="Map legend"><span><i className="legend-line walk"/>Walk</span><span><i className="legend-line taxi"/>Taxi</span><span><i className="legend-line bus"/>Bus</span><span><i className="legend-marker"/>Stop</span></div></>
 }
