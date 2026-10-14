@@ -5,6 +5,7 @@ import { buildInput, type QueryForm } from './query'
 import { QueryControls } from './QueryControls'
 import { JourneyMap } from './JourneyMap'
 import { OptionCard } from './OptionCard'
+import { RequestState } from './RequestState'
 
 const api = createApiClient(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
 
@@ -21,23 +22,26 @@ export function App() {
   const change = (update: Partial<QueryForm>) => setForm(previous => ({...previous,...update}))
   useEffect(() => {
     const controller = new AbortController()
-    setError(''); setLoading(true)
-    api.stops(controller.signal).then(setStops).catch(e => {if (e.name !== 'AbortError') {setError(e.message);setLoading(false)}})
-    return () => controller.abort()
+    setError(''); setLoading(true);setStops([]);setResult(null)
+    const timeout=setTimeout(()=>{controller.abort();setError('Connection timed out. Check the local backend and retry.');setLoading(false)},12000)
+    api.stops(controller.signal).then(list=>{if (!controller.signal.aborted) {setStops(list);if (!list.length) setLoading(false)}}).catch(e => {if (!controller.signal.aborted) {setError(e.message);setLoading(false)}}).finally(()=>clearTimeout(timeout))
+    return () => {clearTimeout(timeout);controller.abort()}
   }, [retry])
   useEffect(() => {
     if (!stops.length) return
     const controller = new AbortController()
+    let timeout: ReturnType<typeof setTimeout> | undefined
     setResult(null);setError('');setLoading(true)
     const timer = setTimeout(async () => {
+      timeout=setTimeout(()=>{controller.abort();setError('Recommendation timed out. Retry the local connection.');setLoading(false)},12000)
       try {
         const response = await api.recommend(buildInput(form), controller.signal)
-        setResult(response); setSelectedId(response.recommended_id || '')
+        if (!controller.signal.aborted) {setResult(response); setSelectedId(response.recommended_id || '')}
       } catch (e) {
         if (e instanceof Error && e.name !== 'AbortError') setError(e.message)
-      } finally { if (!controller.signal.aborted) setLoading(false) }
+      } finally { clearTimeout(timeout);if (!controller.signal.aborted) setLoading(false) }
     }, 250)
-    return () => {clearTimeout(timer);controller.abort()}
+    return () => {clearTimeout(timer);clearTimeout(timeout);controller.abort()}
   }, [form,stops,retry])
   function gps() {
     if (!navigator.geolocation) {setGpsError('Location is unavailable. Enter coordinates or choose a place.');return}
@@ -53,8 +57,7 @@ export function App() {
       {gpsError && <p role="alert" className="error">{gpsError}</p>}
       <QueryControls form={form} stops={stops} onChange={change}/>
       <section className="results" aria-label="Journey options"><h2>Ways to board</h2>
-        {loading && <p role="status">Finding journey options...</p>}
-        {error && <p role="alert" className="error">{error}</p>}
+        <RequestState loading={loading} error={error} empty={!result?.options.length} message={result?.message} onRetry={()=>setRetry(v=>v+1)}/>
         <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} onSelect={()=>setSelectedId(o.id)}/>)}</div>
       </section>
     </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(point)}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
