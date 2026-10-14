@@ -15,7 +15,7 @@ export function OptionCard({option, selected, recommended, onSelect, now,onRepor
       <div><dt><Wallet size={14}/>Cost</dt><dd>LKR {option.cost_lkr.toFixed(0)} <small>estimated</small></dd></div>
       <div><dt><Clock3 size={14}/>Total time</dt><dd>{option.time_minutes.toFixed(1)} min <small>estimated</small></dd></div>
       <div><dt>Waiting</dt><dd>{option.wait_minutes.toFixed(1)} min <small>estimated</small></dd></div>
-      <div><dt>Crowd</dt><dd>{crowdLabel(option.crowd_level)} <small>estimated</small></dd></div>
+      <div><dt>Crowd</dt><dd>{crowdLabel(option.crowd_level)} <small>{option.crowd_source || 'estimated (rule-based)'}</small></dd></div>
       <div><dt>Walking</dt><dd>{option.walk_km.toFixed(2)} km <small>estimated</small></dd></div>
       <div><dt>Saving vs full ride</dt><dd>{option.savings_lkr === null?'Unknown':`LKR ${option.savings_lkr.toFixed(0)}`} <small>estimated</small></dd></div>
     </dl>
