@@ -1,0 +1,106 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const { execFileSync } = require('node:child_process')
+let playwright
+try { playwright = require('../../.qa/browser/node_modules/playwright') }
+catch { playwright = require('../../.qa/playwright/playwright/driver/package') }
+
+async function main() {
+  const browser = await playwright.chromium.launch({
+    executablePath: process.env.BROWSER_EXECUTABLE || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', headless: true,
+  })
+  const reports = []
+  const errors = []
+  const context = await browser.newContext({viewport:{width:1280,height:900}})
+  const page = await context.newPage()
+  page.on('pageerror', error => errors.push(error.message))
+  const matrix = []
+  try {
+    await page.goto(process.env.FRONTEND_URL || 'http://localhost:5173/', {waitUntil:'domcontentloaded'})
+    await page.locator('[data-option-id]').first().waitFor()
+    assert.ok(await page.locator('.sidebar-scroll').evaluate(el=>el.scrollHeight>el.clientHeight))
+    assert.equal(await page.locator('[data-option-id]').count(),4)
+    assert.ok(await page.locator('.leaflet-overlay-pane path').count()>0)
+    fs.mkdirSync('.qa/screenshots',{recursive:true})
+    await page.screenshot({path:'.qa/screenshots/desktop-controls.png'})
+    for (const time of ['08:00','14:00','17:00']) {
+      for (const preference of ['cheapest','fastest','comfortable']) {
+        const responsePromise=page.waitForResponse(response=>{
+          if(!response.url().endsWith('/recommend') || response.request().method()!=='POST')return false
+          const body=response.request().postDataJSON()
+          return body.preference===preference && body.now===`2026-10-14T${time}:00+05:30` && body.minutes_available===90
+        })
+        await page.locator('#journey-time').fill(`2026-10-14T${time}`)
+        await page.getByRole('button',{name:preference[0].toUpperCase()+preference.slice(1),exact:true}).click()
+        const response=await responsePromise
+        assert.equal(response.status(),200)
+        const data=await response.json()
+        const first=page.locator(`[data-option-id="${data.recommended_id}"]`)
+        await first.locator('.recommend-label').waitFor()
+        assert.equal(await page.locator('[data-option-id]').count(),4)
+        assert.equal(await page.locator('.estimate-badge').count(),4)
+        matrix.push({time,preference,recommended:data.recommended_id,bucket:data.bucket})
+      }
+    }
+    async function budget(minutes,preference,rule) {
+      const promise=page.waitForResponse(r=>r.url().endsWith('/recommend') && r.request().postDataJSON()?.minutes_available===minutes && r.request().postDataJSON()?.preference===preference)
+      await page.locator('#journey-time').fill('2026-10-14T14:00')
+      await page.locator('#minutes').fill(String(minutes))
+      await page.getByRole('button',{name:preference[0].toUpperCase()+preference.slice(1),exact:true}).click()
+      const data=await (await promise).json()
+      assert.equal(data.options[0].rule_code,rule)
+      await page.locator(`[data-option-id="${data.recommended_id}"]`).waitFor()
+    }
+    await budget(90,'cheapest','walk')
+    await budget(50,'cheapest','ride')
+    await budget(5,'fastest','short_on_time')
+    await page.locator('.sidebar-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight})
+    assert.ok(await page.locator('.sidebar-scroll').evaluate(el=>el.scrollTop>0))
+    await page.screenshot({path:'.qa/screenshots/desktop-results.png'})
+
+    const reportContext=page.waitForResponse(r=>r.url().endsWith('/recommend') && r.request().postDataJSON()?.now==='2026-10-14T08:00:00+05:30' && r.request().postDataJSON()?.minutes_available===90)
+    await page.locator('#minutes').fill('90')
+    await page.locator('#journey-time').fill('2026-10-14T08:00')
+    const reportData=await (await reportContext).json()
+    await page.locator(`[data-option-id="${reportData.recommended_id}"] .recommend-label`).waitFor()
+    const reportResponse=page.waitForResponse(r=>r.url().endsWith('/crowd-reports') && r.request().method()==='POST')
+    await page.getByRole('button',{name:'Seats free',exact:true}).first().click()
+    const posted=await reportResponse
+    assert.equal(posted.status(),201)
+    reports.push((await posted.json()).id)
+    await page.getByText('Unverified report saved for the selected journey time.').waitFor()
+
+    await page.route('**/recommend',route=>route.fulfill({status:503,contentType:'application/json',body:'{"detail":"Database unavailable"}'}))
+    await page.getByRole('button',{name:'Refresh journey',exact:true}).click()
+    await page.getByText('Database unavailable',{exact:true}).waitFor()
+    assert.equal(await page.locator('[data-option-id]').count(),0)
+    await page.unroute('**/recommend')
+    await page.getByRole('button',{name:'Retry connection',exact:true}).click()
+    await page.locator('[data-option-id]').first().waitFor()
+    await page.locator('#latitude').fill('0'); await page.locator('#longitude').fill('0')
+    await page.getByText('No eligible options in the estimated demo coverage, or already at the drop-off stop.').waitFor()
+    assert.equal(await page.locator('[data-option-id]').count(),0)
+
+    const narrow = await context.newPage()
+    await narrow.setViewportSize({width:390,height:844})
+    await narrow.goto(process.env.FRONTEND_URL || 'http://localhost:5173/')
+    await narrow.locator('[data-option-id]').first().waitFor()
+    assert.ok(await narrow.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth))
+    await narrow.locator('.map-panel').scrollIntoViewIfNeeded()
+    await narrow.locator('.leaflet-tile-loaded').first().waitFor()
+    assert.ok(await narrow.locator('.leaflet-overlay-pane path').count()>=3)
+    await narrow.locator('.map-panel').screenshot({path:'.qa/screenshots/narrow-map.png'})
+    await narrow.screenshot({path:'.qa/screenshots/narrow-web.png',fullPage:true})
+    assert.deepEqual(errors,[])
+    fs.writeFileSync('.qa/browser-results.json',JSON.stringify({matrix,walkRide:true,emptyErrorRetry:true,crowdReport:true,consoleErrors:errors},null,2))
+    console.log('Browser checks passed: 9 preference/time combinations, walk/ride/deadline, reporting, empty/error/retry, map overlays and narrow-web layout.')
+  } finally {
+    await browser.close()
+    for(const id of reports) {
+      assert.match(id,/^[0-9a-f-]{36}$/)
+      execFileSync('docker',['compose','exec','-T','db','psql','-U','boardhere','-d','boardhere','-v','ON_ERROR_STOP=1','-c',`delete from boardhere.crowd_reports where id='${id}'`],{cwd:path.resolve(__dirname,'../..'),stdio:'pipe'})
+    }
+  }
+}
+main().catch(error=>{console.error(error);process.exitCode=1})
