@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
-import { AlertCircle, BusFront, CheckCircle2, MapPin, RefreshCw, Route } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { AlertCircle, BusFront, CheckCircle2, Eye, MapPin, RefreshCw, Route, Scale } from 'lucide-react'
 import { createApiClient, type Recommendation, type Stop, type CrowdLevel } from './api'
 import { buildInput, coordinateOriginUpdate, type QueryForm } from './query'
 import { QueryControls } from './QueryControls'
 import { JourneyMap } from './JourneyMap'
 import { OptionCard } from './OptionCard'
 import { RequestState } from './RequestState'
+import { JourneyDiscoveryControls, JourneyFilterEmpty } from './JourneyDiscoveryControls'
+import { JourneyComparison } from './JourneyComparison'
+import { filterOptions, sortOptions, toggleComparison, type JourneyFilter, type JourneySort } from './journeyDiscovery'
 
 const api = createApiClient(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
 
@@ -20,6 +23,10 @@ export function App() {
   const [gpsError, setGpsError] = useState('')
   const [locating, setLocating] = useState(false)
   const [reportNotice,setReportNotice]=useState('')
+  const [filter,setFilter]=useState<JourneyFilter>('all')
+  const [sort,setSort]=useState<JourneySort>('recommended')
+  const [comparisonIds,setComparisonIds]=useState<string[]>([])
+  const [comparisonOpen,setComparisonOpen]=useState(false)
   const change = (update: Partial<QueryForm>) => setForm(previous => ({...previous,...update}))
   useEffect(() => {
     const controller = new AbortController()
@@ -37,7 +44,7 @@ export function App() {
       timeout=setTimeout(()=>{controller.abort();setError('Recommendation timed out. Retry the local connection.');setLoading(false)},12000)
       try {
         const response = await api.recommend(buildInput(form), controller.signal)
-        if (!controller.signal.aborted) {setResult(response); setSelectedId(response.recommended_id || '')}
+        if (!controller.signal.aborted) {setResult(response);setSelectedId(response.recommended_id||'');setFilter('all');setSort('recommended');setComparisonIds([]);setComparisonOpen(false)}
       } catch (e) {
         if (e instanceof Error && e.name !== 'AbortError') setError(e.message)
       } finally { clearTimeout(timeout);if (!controller.signal.aborted) setLoading(false) }
@@ -50,6 +57,9 @@ export function App() {
     navigator.geolocation.getCurrentPosition(({coords}) => {change(coordinateOriginUpdate({lat:coords.latitude,lng:coords.longitude}));setLocating(false)}, () => {setGpsError('Location permission denied or unavailable. Choose a starting place.');setLocating(false)}, {timeout:10000})
   }
   const selected = result?.options.find(o => o.id === selectedId) ?? result?.options[0]
+  const visibleOptions=useMemo(()=>sortOptions(filterOptions(result?.options??[],filter),sort),[result,filter,sort])
+  const selectedHidden=Boolean(selected&&result&&filter!=='all'&&!visibleOptions.some(option=>option.id===selected.id))
+  const comparisonOptions=comparisonIds.map(id=>result?.options.find(option=>option.id===id)).filter((option):option is NonNullable<typeof option>=>Boolean(option))
   async function report(legId:string,level:CrowdLevel) {
     if (!result) return
     await api.report(legId,level,result.now)
@@ -64,7 +74,12 @@ export function App() {
         {result?.options.length?<p className="results-summary"><Route size={14}/>{result.options.length} estimated routes · ranked for {result.preference}</p>:null}
         {reportNotice && <p className="report-notice" role="status"><CheckCircle2 size={15}/>{reportNotice}</p>}
         <RequestState loading={loading} error={error} empty={!result?.options.length} message={result?.message} onRetry={()=>setRetry(v=>v+1)}/>
-        <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)} onReport={report}/>)}</div>
+        {result?.options.length?<JourneyDiscoveryControls options={result.options} filter={filter} sort={sort} onFilter={setFilter} onSort={setSort}/>:null}
+        {selectedHidden&&<div className="hidden-selection" role="status"><Eye size={16}/><span><strong>Your mapped journey is hidden by this filter.</strong> The map still shows {selected?.title}.</span><button type="button" onClick={()=>setFilter('all')}>Show it</button></div>}
+        {comparisonIds.length>0&&<div className="comparison-tray" role="status"><span><Scale size={16}/><strong>{comparisonIds.length} of 3</strong> selected for comparison</span><button type="button" disabled={comparisonIds.length<2} onClick={()=>setComparisonOpen(true)}>Compare {comparisonIds.length}</button><button type="button" onClick={()=>{setComparisonIds([]);setComparisonOpen(false)}}>Clear</button></div>}
+        {result&&visibleOptions.length===0&&<JourneyFilterEmpty onClear={()=>setFilter('all')}/>}
+        <div className="option-list">{result&&visibleOptions.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)} onReport={report} comparisonSelected={comparisonIds.includes(o.id)} comparisonDisabled={comparisonIds.length>=3} onCompare={()=>setComparisonIds(ids=>toggleComparison(ids,o.id))}/>)}</div>
+        {comparisonOpen&&comparisonOptions.length>=2?<JourneyComparison options={comparisonOptions} now={result?.now||''} onClose={()=>setComparisonOpen(false)} onRemove={id=>{setComparisonIds(ids=>ids.filter(value=>value!==id));if(comparisonIds.length<=2)setComparisonOpen(false)}}/>:null}
       </section>
     </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(coordinateOriginUpdate(point))}/><div className="map-hint"><MapPin size={15}/><span><strong>Estimated schematic</strong><small>Tap map to move your start</small></span></div></main></div>
 }
