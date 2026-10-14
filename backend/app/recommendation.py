@@ -4,6 +4,7 @@ from . import repository
 from .engine import estimate_options, rank_options
 from .models import RecommendRequest
 from .rules import apply_rules
+from .explanations import explain
 from .time_model import COLOMBO, get_time_bucket
 
 
@@ -15,6 +16,7 @@ def recommend(request: RecommendRequest, now: datetime) -> dict:
         options = apply_rules(rank_options(estimate_options(catalog, now, request.origin.model_dump()), request.preference), request.minutes_available)
     except ValueError:
         raise HTTPException(503, 'Journey data is incomplete; no estimate can be supplied') from None
+    options = [{**o, 'explanation': explain(o, request.preference, request.minutes_available)} for o in options]
     return {
         'now': now.astimezone(COLOMBO).isoformat(), 'bucket': get_time_bucket(now),
         'preference': request.preference, 'minutes_available': request.minutes_available,
