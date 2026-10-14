@@ -14,16 +14,6 @@ Estimated journey costs, durations, waits, walking distances, savings, and time-
 
 ![Desktop journey results with estimated costs and times alongside the journey map](docs/screenshots/desktop-results.png)
 
-### Narrow-screen website
-
-The responsive web layout includes journey controls, ranked options, and unverified crowd-report buttons. This is the website in a narrow browser viewport, not a native mobile application.
-
-<img src="docs/screenshots/narrow-web.png" alt="Responsive website showing journey controls, ranked estimated options, and crowd-report buttons" width="390">
-
-### Narrow-screen map
-
-<img src="docs/screenshots/narrow-map.png" alt="Narrow-screen journey sketch with boarding and drop-off markers and OpenStreetMap attribution" width="390">
-
 ## Run locally
 
 Requirements: Docker Desktop running and Node.js 22.6 or later. Python runs inside the backend container; no host Python installation is required.
