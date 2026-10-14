@@ -7,7 +7,8 @@ import { buildInput, type QueryForm } from '../../src/query'
 const form: QueryForm = {lat:6.952,lng:79.879,destination:'maharagama',preference:'fastest',minutes:90,overrideTime:true,time:'2026-10-14T08:00'}
 test('controls expose all preferences, budget, and Sri Lanka time', () => {
   const html = renderToStaticMarkup(<QueryControls form={form} stops={[]} onChange={()=>{}}/> )
-  for (const label of ['Cheapest','Fastest','Comfortable','Minutes available','Date and time (Sri Lanka)']) assert.ok(html.includes(label))
+  for (const label of ['Starting place','Search stops by name','Bus drop-off stop','Search destinations','Cheapest','Fastest','Comfortable','Minutes available','Date and time (Sri Lanka)']) assert.ok(html.includes(label))
+  assert.equal((html.match(/role="combobox"/g)||[]).length,2)
   assert.ok(html.includes('max="1440"'))
 })
 test('time overrides are offset-aware; invalid numeric inputs fail', () => {

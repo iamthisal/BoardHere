@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, BusFront, Crosshair, MapPin, RefreshCw } from 'lucide-react'
 import { createApiClient, type Recommendation, type Stop, type CrowdLevel } from './api'
-import { buildInput, type QueryForm } from './query'
+import { buildInput, coordinateOriginUpdate, type QueryForm } from './query'
 import { QueryControls } from './QueryControls'
 import { JourneyMap } from './JourneyMap'
 import { OptionCard } from './OptionCard'
@@ -10,7 +10,7 @@ import { RequestState } from './RequestState'
 const api = createApiClient(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
 
 export function App() {
-  const [form, setForm] = useState<QueryForm>({lat:6.952,lng:79.879,destination:'maharagama',preference:'fastest',minutes:90,overrideTime:true,time:'2026-10-14T08:00'})
+  const [form, setForm] = useState<QueryForm>({lat:6.952,lng:79.879,originStopId:'10000000-0000-0000-0000-000000000001',destination:'maharagama',preference:'fastest',minutes:90,overrideTime:true,time:'2026-10-14T08:00'})
   const [stops, setStops] = useState<Stop[]>([])
   const [result, setResult] = useState<Recommendation | null>(null)
   const [selectedId, setSelectedId] = useState('')
@@ -47,7 +47,7 @@ export function App() {
   function gps() {
     if (!navigator.geolocation) {setGpsError('Location is unavailable. Enter coordinates or choose a place.');return}
     setLocating(true);setGpsError('')
-    navigator.geolocation.getCurrentPosition(({coords}) => {change({lat:coords.latitude,lng:coords.longitude});setLocating(false)}, () => {setGpsError('Location permission denied or unavailable. Choose a starting place.');setLocating(false)}, {timeout:10000})
+    navigator.geolocation.getCurrentPosition(({coords}) => {change(coordinateOriginUpdate({lat:coords.latitude,lng:coords.longitude}));setLocating(false)}, () => {setGpsError('Location permission denied or unavailable. Choose a starting place.');setLocating(false)}, {timeout:10000})
   }
   const selected = result?.options.find(o => o.id === selectedId) ?? result?.options[0]
   async function report(legId:string,level:CrowdLevel) {
@@ -67,5 +67,5 @@ export function App() {
         <RequestState loading={loading} error={error} empty={!result?.options.length} message={result?.message} onRetry={()=>setRetry(v=>v+1)}/>
         <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)} onReport={report}/>)}</div>
       </section>
-    </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(point)}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
+    </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(coordinateOriginUpdate(point))}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
 }
