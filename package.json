@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "test:database": "node --test tests/database/*.test.mjs",
+    "test:web": "node scripts/test-web.mjs",
     "db:seed": "node scripts/seed-db.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },

@@ -4,6 +4,12 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 button, select { font: inherit; }
+input { font: inherit; }
+.form-input { width: 100%; min-width: 0; height: 43px; border: 1px solid #d4ddd7; border-radius: 6px; padding: 0 10px; background: #fff; color: #26362e; margin-bottom: 14px; }
+.coordinate-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.control-label { margin-top:8px !important; }
+.checkbox-label { display:flex !important; align-items:center; gap:8px; margin:6px 0 14px !important; }
+.icon-button { display:grid; place-items:center; border:1px solid #d4ddd7; border-radius:5px; width:32px; height:32px; background:#fff; color:#367b67; }
 button { cursor: pointer; }
 button:disabled { cursor: wait; opacity: .65; }
 .app-shell { display: grid; grid-template-columns: minmax(380px, 450px) minmax(0, 1fr); height: 100vh; min-height: 620px; }
