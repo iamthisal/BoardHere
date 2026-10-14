@@ -3,7 +3,8 @@ from psycopg import Error as DatabaseError
 from . import database, repository
 from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
-from .models import RecommendRequest, Origin, Preference
+from .models import RecommendRequest, Origin, Preference, CrowdReportRequest
+from .crowd import add_report, latest_report
 from .recommendation import recommend
 from .config import cors_origins
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +49,18 @@ def explanation(option_id: str, origin_lat: float = Query(6.952, ge=-90, le=90),
         'preference': preference, 'minutes_available': minutes_available, 'data_status': 'estimated',
         'option_id': option_id, 'score': option['score'], 'criteria': option['score_breakdown'],
         'explanation': option['explanation']}
+
+
+@app.post('/crowd-reports', status_code=201)
+def crowd_report(request: CrowdReportRequest):
+    return add_report(request, datetime.now(timezone.utc))
+
+
+@app.get('/crowd-reports/latest/{leg_id}')
+def crowd_latest(leg_id: str, now: datetime | None = None):
+    if now is not None and (now.tzinfo is None or now.utcoffset() is None):
+        raise HTTPException(422, 'now must include a timezone offset')
+    return latest_report(leg_id, now or datetime.now(timezone.utc))
 
 
 @app.get("/health")

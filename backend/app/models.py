@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Preference = Literal['cheapest', 'fastest', 'comfortable']
+CrowdLevel = Literal['seats_free', 'standing', 'packed']
 
 
 class Origin(BaseModel):
@@ -25,3 +26,15 @@ class RecommendRequest(BaseModel):
         if value is not None and (value.tzinfo is None or value.utcoffset() is None):
             raise ValueError('now must include a timezone offset')
         return value
+
+
+class CrowdReportRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    leg_id: str = Field(min_length=1, max_length=160)
+    crowd_level: CrowdLevel
+    reported_at: datetime | None = None
+
+    @field_validator('reported_at')
+    @classmethod
+    def aware_time(cls, value):
+        return RecommendRequest.aware_time(value)
