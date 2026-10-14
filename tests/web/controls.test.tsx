@@ -15,4 +15,6 @@ test('time overrides are offset-aware; invalid numeric inputs fail', () => {
   assert.equal(buildInput({...form,overrideTime:false}).now,undefined)
   assert.throws(()=>buildInput({...form,lat:NaN}))
   assert.throws(()=>buildInput({...form,minutes:0}))
+  assert.throws(()=>buildInput({...form,time:'2026-02-31T08:00'}))
+  assert.throws(()=>buildInput({...form,time:'2026-10-14T24:30'}))
 })

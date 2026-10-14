@@ -1,80 +1,57 @@
-# Database and backend direction
+# Local database and API
 
-BoardHere will use a React web frontend, a Python FastAPI backend, and local PostgreSQL through Docker Compose. Cloud deployment, mobile applications, and offline installation are outside the current scope.
+Start PostgreSQL with `docker compose up -d --wait db`, then run `npm run db:seed`. The first command initializes a new volume; the second also applies pending migrations to an existing database and upserts the estimated demo data. No cloud database or deployment is required.
 
-## SQL, cloud hosting, and local development
-
-SQL describes the database model; cloud or local describes where it runs. PostgreSQL can run in either place. We are using a local PostgreSQL container for development; a hosted PostgreSQL service such as Supabase remains an option later.
-
-Run React and FastAPI locally and connect FastAPI to the Docker database. The database files live in a Docker named volume, so ordinary container restarts and `docker compose down` keep them. The SQL tests use a transaction that rolls back every fixture and test role.
-
-SQL suits this project because a stop can serve multiple routes, each route direction has an ordered list of stops, and a fare belongs to a particular boarding/drop-off pair. Foreign keys and constraints protect those relationships.
-
-## Request flow
-
-```text
-React (GPS or entered location + drop-off stop)
-  -> FastAPI (candidate boarding points, travel estimates, ranking)
-  -> Local PostgreSQL (verified routes, stops, and fares)
-```
-
-FastAPI owns database access. Database connection credentials stay in backend environment variables and must not use a frontend `VITE_` variable.
-
-## Start and connect
-
-With Docker Desktop running, execute these from the repository root:
+The database defaults are `127.0.0.1:55432`, database `boardhere`, administration user `boardhere`, local password `boardhere_dev_only`. Connect using:
 
 ```sh
-docker compose up -d --wait db
-npm run test:database
 docker compose exec db psql -U boardhere -d boardhere
 ```
 
-The connection defaults are host `127.0.0.1`, port `55432`, database `boardhere`, user `boardhere`, and the local-only password `boardhere_dev_only`. Port `55432` avoids the usual local PostgreSQL port `5432`. The database is bound only to localhost.
+FastAPI runs in the Compose network and connects to `db:5432` using the restricted `boardhere_api` login. It can read the catalog and insert the permitted crowd-report columns. It cannot edit routes, fares, or time profiles. Its development-only password is `boardhere_api_dev_only`.
 
-Optional overrides are documented in `.env.example`; put them in an ignored root `.env` before first startup. The image's database/password initialization variables only take effect on an empty data volume. Changing them later does not change an existing database password.
+The default administration password and host port can be overridden in an ignored root `.env`. Initialization variables only affect an empty PostgreSQL volume; changing `.env` later does not change an existing database password. If using nondefault administration credentials, supply `TEST_DATABASE_URL` to the API test container so its report-fixture cleanup can connect.
 
-For FastAPI running on the host, the default connection URL will be `postgresql://boardhere:boardhere_dev_only@127.0.0.1:55432/boardhere`. If the backend later runs in this Compose network, use `db:5432` instead of localhost.
+The `boardhere` schema is private. React calls FastAPI; it never connects directly to PostgreSQL.
 
-To stop while keeping data:
+| Table | Purpose |
+| --- | --- |
+| `stops` | Named places, estimated coordinates, boarding/drop-off/origin kind, and source status |
+| `routes`, `route_patterns` | Bus labels and individual directions/variants |
+| `route_stops` | Ordered stop positions and boarding/alighting eligibility |
+| `fares` | Estimated prices for a boarding/drop-off pair in one pattern |
+| `journey_options`, `journey_legs` | Ordered multimodal demo alternatives and baseline scenario values |
+| `time_buckets`, `route_time_profile` | Bucket definitions and hand-set segment estimates |
+| `crowd_reports` | Unverified passenger reports with timestamps |
+| `public.boardhere_migrations` | Applied local migration names and checksums |
 
-```sh
-docker compose down
+The demo explicitly permits estimated data and labels it throughout the response. Original `verified_at` fields remain empty; no seed is promoted to verified transport data. Missing time profiles or valid bus fares produce an incomplete-data error rather than a made-up number.
+
+The named Docker volume survives `docker compose down`. New migrations are applied through `npm run db:seed`; restarting PostgreSQL alone does not apply migrations to an existing volume.
+
+FastAPI exposes:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Database connectivity |
+| `GET /stops` | Catalog places with source/status |
+| `POST /recommend` | Ranked options with a recommendation and explanations |
+| `GET /explain/{option_id}` | Contextual normalized criteria, weights, and contributions |
+| `POST /crowd-reports` | Save an unverified bus-leg report |
+| `GET /crowd-reports/latest/{leg_id}` | Latest nonfuture report and freshness flag |
+
+Example recommendation body:
+
+```json
+{
+  "origin": {"lat": 6.952, "lng": 79.879},
+  "destination": "maharagama",
+  "preference": "fastest",
+  "minutes_available": 90,
+  "now": "2026-10-14T08:00:00+05:30"
+}
 ```
 
-Do not add `--volumes` when stopping if you want to keep the data.
+`now` is optional. Explicit times must include an offset. `destination` accepts a drop-off slug or ID. `/explain` accepts `origin_lat`, `origin_lng`, `preference`, `minutes_available`, and `now` query parameters. Supply the same resolved context returned by `/recommend` to compare a breakdown.
 
-## Initial schema
-
-The first migration is `database/migrations/20261014000100_route_catalog.sql`. The PostgreSQL image runs it automatically when initializing a new, empty data volume. It creates the private `boardhere` schema. Browser clients will access records through FastAPI.
-
-Restarting an existing container does not rerun migrations. Future migrations must be applied explicitly once, through the backend's migration workflow; deleting the data volume is not a migration strategy.
-
-| Table | Stores |
-| --- | --- |
-| `stops` | Exact coordinates, names, boarding notes, and verification evidence |
-| `routes` | Bus route codes and names |
-| `route_patterns` | A particular direction or variant of a route |
-| `route_stops` | Stop order and whether boarding/alighting is allowed |
-| `fares` | A sourced price between two ordered stops in one pattern |
-
-A stop may appear twice in a pattern, allowing loop routes. Two stops on opposite sides of a road should have separate IDs when their boarding locations differ.
-
-Rows start unverified. Verification needs both a source and a timestamp. The planning API must require a verified pattern and verified boarding/drop-off stops, then select an earlier boardable position and a later alightable position in the same pattern. A missing fare means unknown, not zero.
-
-The migration contains no seeded routes. The existing frontend's sample corridor is synthetic and must not be promoted into verified database records.
-
-## Next backend slice
-
-1. Create the FastAPI application and configure a backend-only database connection.
-2. Add read queries and an API for verified drop-off stops.
-3. Add the journey-planning endpoint and return explicit estimate sources.
-4. Connect the frontend to that API, with loading and connection-error states.
-
-The local `boardhere` login currently administers the development database. The backend should use a dedicated login with only the permissions needed by its endpoints when we add the API.
-
-## References
-
-- [Official PostgreSQL Docker image](https://hub.docker.com/_/postgres)
-- [Docker persistent volumes](https://docs.docker.com/get-started/docker-concepts/running-containers/persisting-container-data/)
-- [FastAPI request validation](https://fastapi.tiangolo.com/python-types/)
+Catalog reads use a repeatable-read database snapshot. The resolved time is captured outside scoring. Keep the returned data fingerprint when recording a demonstration result.
