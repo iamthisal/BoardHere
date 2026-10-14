@@ -4,6 +4,26 @@ A local working demo of a boarding-point guide: React -> Python FastAPI -> Postg
 
 All transport coordinates, route alignments, fares, durations, waits, and crowd levels are **estimated and unverified**. Map lines are journey sketches, not street directions. Taxi fares are scenario estimates, not quotes or bookings. This is not validated guidance for a real journey.
 
+## Demo screenshots
+
+Captured from the local working demo during browser checks. Transport values are estimated and unverified; map lines are journey sketches, not street directions. Map imagery is attributed to OpenStreetMap contributors in each capture.
+
+### Desktop results
+
+Estimated journey costs, durations, waits, walking distances, savings, and time-budget explanations alongside the map.
+
+![Desktop journey results with estimated costs and times alongside the journey map](docs/screenshots/desktop-results.png)
+
+### Narrow-screen website
+
+The responsive web layout includes journey controls, ranked options, and unverified crowd-report buttons. This is the website in a narrow browser viewport, not a native mobile application.
+
+<img src="docs/screenshots/narrow-web.png" alt="Responsive website showing journey controls, ranked estimated options, and crowd-report buttons" width="390">
+
+### Narrow-screen map
+
+<img src="docs/screenshots/narrow-map.png" alt="Narrow-screen journey sketch with boarding and drop-off markers and OpenStreetMap attribution" width="390">
+
 ## Run locally
 
 Requirements: Docker Desktop running and Node.js 22.6 or later. Python runs inside the backend container; no host Python installation is required.
@@ -73,6 +93,6 @@ Do not add `--volumes` if you want to retain the data. `db:seed` applies pending
 
 ## Git workflow
 
-`main` remains the previous demo release. Completed, tested work is integrated into local `develop`. Each requested group has its own branch: `feat/seed-data`, `feat/engine`, `feat/api-rules`, `feat/web`, `feat/crowd-reports`, and `chore/finish`.
+`main` remains the previous demo release. Completed, tested work is integrated into `develop`. Each requested group has its own branch: `feat/seed-data`, `feat/engine`, `feat/api-rules`, `feat/web`, `feat/crowd-reports`, and `chore/finish`.
 
-Conventional commits use the configured `iamthisal` identity. Feature tests accompany their feature commits. This work is local only: no push and no deployment.
+Conventional commits use the configured `iamthisal` identity. Feature tests accompany their feature commits. The completed demo and group branches have been pushed to GitHub; no deployment has been performed.
