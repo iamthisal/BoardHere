@@ -27,5 +27,16 @@ The route, stop coordinates, fares, and times are **illustrative demo data**. Th
 
 1. Working boarding-option comparison for a small illustrative corridor.
 2. Verify local routes, stop coordinates, and fares; replace demo data.
-3. Persist verified routes and stops in Supabase, with safe editing access.
+3. Connect the local PostgreSQL route catalog through a Python FastAPI backend.
 4. Add crowd reports after the core boarding flow is reliable.
+
+## Database foundation
+
+Start the local PostgreSQL database with Docker Desktop running:
+
+```sh
+docker compose up -d --wait db
+npm run test:database
+```
+
+The SQL migration in `database/migrations/` initializes the route catalog in an empty Docker volume. It is not connected to the frontend yet. See [database and backend direction](docs/database.md) for connection details, the schema, and the planned Python FastAPI API.
