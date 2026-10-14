@@ -64,6 +64,10 @@ button:disabled { cursor: wait; opacity: .65; }
 .request-state { padding:16px 0; font-size:13px; line-height:1.6; color:#53665a; }
 .request-state[role="alert"] { color:#a3422c; }
 .request-state p { margin:0 0 10px; }
+.estimate-badge { display:flex; flex-wrap:wrap; gap:4px 8px; font-size:10px; color:#6c5329; margin-bottom:12px; }
+.estimate-badge strong { padding:3px 5px; background:#fff3d6; border-radius:3px; font-weight:600; }
+.estimate-badge span { padding:3px 0; }
+.arrival-note { font-size:11px; color:#536a5d; }
 .option { width: 100%; padding: 14px 14px 0; text-align: left; border: 1px solid #dfe7e1; background: #fff; border-radius: 7px; color: inherit; overflow: hidden; }
 .option:hover { border-color: #91b9a5; }
 .option.selected { border: 2px solid #3b9174; padding: 13px 13px 0; box-shadow: 0 2px 8px #1e6a4c12; }

@@ -58,7 +58,7 @@ export function App() {
       <QueryControls form={form} stops={stops} onChange={change}/>
       <section className="results" aria-label="Journey options"><h2>Ways to board</h2>
         <RequestState loading={loading} error={error} empty={!result?.options.length} message={result?.message} onRetry={()=>setRetry(v=>v+1)}/>
-        <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} onSelect={()=>setSelectedId(o.id)}/>)}</div>
+        <div className="option-list">{result?.options.map(o => <OptionCard option={o} key={o.id} selected={selected?.id===o.id} recommended={result.recommended_id===o.id} now={result.now} onSelect={()=>setSelectedId(o.id)}/>)}</div>
       </section>
     </div></aside><main className="map-panel"><JourneyMap origin={{lat:form.lat,lng:form.lng}} option={selected} onPick={point=>change(point)}/><div className="map-hint"><MapPin size={15}/>Estimated journey sketch</div></main></div>
 }
