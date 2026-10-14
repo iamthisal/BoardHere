@@ -12,14 +12,14 @@ async function main() {
   })
   const reports = []
   const errors = []
-  const context = await browser.newContext({viewport:{width:1280,height:900}})
+  const context = await browser.newContext({viewport:{width:1440,height:900}})
   const page = await context.newPage()
   page.on('pageerror', error => errors.push(error.message))
   const matrix = []
   try {
     await page.goto(process.env.FRONTEND_URL || 'http://localhost:5173/', {waitUntil:'domcontentloaded'})
     await page.locator('[data-option-id]').first().waitFor()
-    assert.ok(await page.locator('.sidebar-scroll').evaluate(el=>el.scrollHeight>el.clientHeight))
+    assert.ok(await page.locator('.results-scroll').evaluate(el=>el.scrollHeight>el.clientHeight))
     assert.equal(await page.locator('[data-option-id]').count(),4)
     assert.ok(await page.locator('.leaflet-overlay-pane path').count()>0)
     await page.locator('.coordinate-details summary').click()
@@ -59,6 +59,7 @@ async function main() {
     await destinationSearch.press('ArrowDown');await destinationSearch.press('Enter')
     assert.equal((await returnResponse).status(),200)
     fs.mkdirSync('.qa/screenshots',{recursive:true})
+    await page.waitForTimeout(1000)
     await page.screenshot({path:'.qa/screenshots/desktop-controls.png'})
     for (const time of ['08:00','14:00','17:00']) {
       for (const preference of ['cheapest','fastest','comfortable']) {
@@ -109,8 +110,8 @@ async function main() {
     await budget(90,'cheapest','walk')
     await budget(50,'cheapest','ride')
     await budget(5,'fastest','short_on_time')
-    await page.locator('.sidebar-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight})
-    assert.ok(await page.locator('.sidebar-scroll').evaluate(el=>el.scrollTop>0))
+    await page.locator('.results-scroll').evaluate(el=>{el.scrollTop=el.scrollHeight})
+    assert.ok(await page.locator('.results-scroll').evaluate(el=>el.scrollTop>0))
     await page.screenshot({path:'.qa/screenshots/desktop-results.png'})
 
     const reportContext=page.waitForResponse(r=>r.url().endsWith('/recommend') && r.request().postDataJSON()?.now==='2026-10-14T08:00:00+05:30' && r.request().postDataJSON()?.minutes_available===90)
@@ -118,6 +119,9 @@ async function main() {
     await page.locator('#journey-time').fill('2026-10-14T08:00')
     const reportData=await (await reportContext).json()
     await page.locator(`[data-option-id="${reportData.recommended_id}"] .recommend-label`).waitFor()
+    await page.locator(`[data-option-id="${reportData.recommended_id}"] .option-select`).click()
+    await page.getByRole('heading',{name:/estimated/i}).first().waitFor()
+    await page.screenshot({path:'.qa/screenshots/desktop-details.png'})
     const reportResponse=page.waitForResponse(r=>r.url().endsWith('/crowd-reports') && r.request().method()==='POST')
     await page.getByRole('button',{name:'Seats free',exact:true}).first().click()
     const posted=await reportResponse
@@ -135,6 +139,13 @@ async function main() {
     await page.locator('#latitude').fill('0'); await page.locator('#longitude').fill('0')
     await page.getByText('No eligible options in the estimated demo coverage, or already at the drop-off stop.').waitFor()
     assert.equal(await page.locator('[data-option-id]').count(),0)
+
+    const laptop = await context.newPage()
+    await laptop.setViewportSize({width:1280,height:800})
+    await laptop.goto(process.env.FRONTEND_URL || 'http://localhost:5173/')
+    await laptop.locator('[data-option-id]').first().waitFor()
+    assert.ok(await laptop.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth))
+    await laptop.screenshot({path:'.qa/screenshots/laptop-web.png',fullPage:true})
 
     const tablet = await context.newPage()
     await tablet.setViewportSize({width:768,height:1024})
@@ -155,6 +166,8 @@ async function main() {
     await narrow.getByRole('heading',{name:'Compare journeys'}).waitFor()
     assert.equal(await narrow.locator('.comparison-card').count(),2)
     assert.ok(await narrow.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth))
+    await narrow.screenshot({path:'.qa/screenshots/mobile-comparison.png',fullPage:true})
+    await narrow.getByRole('button',{name:'Close comparison'}).click()
     await narrow.locator('.map-panel').scrollIntoViewIfNeeded()
     await narrow.locator('.leaflet-tile-loaded').first().waitFor()
     assert.ok(await narrow.locator('.leaflet-overlay-pane path').count()>=3)
