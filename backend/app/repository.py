@@ -17,3 +17,9 @@ def get_catalog(destination: str) -> dict:
         'profiles': ("select * from boardhere.route_time_profile order by leg_id, bucket", ()),
         'route_stops': ("select * from boardhere.route_stops order by pattern_id, sequence", ()),
     })
+
+
+def option_destination(option_id: str) -> str | None:
+    rows = database.read("""select s.slug from boardhere.journey_options o
+        join boardhere.stops s on s.id=o.destination_id where o.id=%s and o.active""", (option_id,))
+    return rows[0]['slug'] if rows else None
