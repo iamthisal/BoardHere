@@ -1,45 +1,78 @@
 # BoardHere
 
-A first working slice of a Colombo boarding-point guide. Enter a starting point or use GPS, choose a bus drop-off stop, and compare walking or tuk access to an eligible boarding stop.
+A local working demo of a boarding-point guide: React -> Python FastAPI -> PostgreSQL in Docker. It compares a full PickMe ride, two buses, a PickMe hop plus a bus, and walking plus a bus. The demonstration starts at Orion City / Orugodawatta and supports Maharagama and an explicitly estimated Homagama/138 corridor.
+
+All transport coordinates, route alignments, fares, durations, waits, and crowd levels are **estimated and unverified**. Map lines are journey sketches, not street directions. Taxi fares are scenario estimates, not quotes or bookings. This is not validated guidance for a real journey.
 
 ## Run locally
 
+Requirements: Docker Desktop running and Node.js 22.6 or later. Python runs inside the backend container; no host Python installation is required.
+
 ```sh
 npm install
+docker compose up -d --wait db
+npm run db:seed
+docker compose up -d --build api
 npm run dev
+```
+
+Open **http://localhost:5173/**. The API is at **http://localhost:8000**, its interactive documentation at **http://localhost:8000/docs**, and its database health check at `/health`. PostgreSQL is available only on localhost, port `55432`.
+
+Choose a starting place, enter coordinates, tap the map, or use GPS with browser permission. Choose a drop-off stop, preference, and minutes available. The time override uses Sri Lanka time. Compare `08:00`, `14:00`, and `17:00` on a weekday to see the profiles change. Disable the override to use the time captured by the API for that request.
+
+The default fixed demo date is Wednesday, 14 October 2026. All displayed transport numbers are labeled estimated. Reports submitted through the demo are unverified and use the selected journey time; future-dated reports are rejected.
+
+Optional root `.env` values are documented in `.env.example`. `VITE_API_BASE_URL` contains only the API URL; database credentials never belong in frontend variables. The default local passwords are development-only. If port `5173` is occupied, stop the conflicting process or deliberately update both the frontend port and the API's `CORS_ORIGINS`.
+
+## Tests
+
+With the database started and seeded:
+
+```sh
+npm run test:database
+docker compose run --rm -T --no-deps api python -m pytest -q
 npm test
+npm run test:web
 npm run build
 ```
 
-The app currently has a sample corridor with selectable drop-off stops, preset starting places, GPS, and map-click origin selection. It recommends an option based on estimated time and cost, with separate fastest and cheapest sorting.
+The PostgreSQL tests roll back their fixtures. API report tests remove their own inserted reports. Render tests use the existing React/esbuild tooling. The backend tests include all bucket boundaries, every preference, changed morning/midday ranking, determinism, GPS access, walk/ride/deadline rules, API errors, and the exact report-expiry boundary.
 
-The route, stop coordinates, fares, and times are **illustrative demo data**. The dashed map line is a sample corridor, not a verified bus path. Estimates use fixed walking, tuk, and bus speeds plus an assumed eight-minute wait. There is no live bus data, street-level walking route, tuk booking, or Supabase connection yet. Verify stops and route coverage on the ground before using this for real journeys. GPS needs browser location permission and a secure context (localhost works).
-
-## Branches and commits
-
-- `main`: stable, reviewed releases.
-- `develop`: integration branch for completed features.
-- `feat/*`, `fix/*`, `chore/*`: focused branches from `develop`.
-- Merge a feature into `develop` after review; promote tested `develop` changes to `main`.
-- Use Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`) and keep each commit focused.
-
-## Near-term milestones
-
-1. Working boarding-option comparison for a small illustrative corridor.
-2. Verify local routes, stop coordinates, and fares; replace demo data.
-3. Connect the local PostgreSQL route catalog through a Python FastAPI backend.
-4. Add crowd reports after the core boarding flow is reliable.
-
-## Database foundation
-
-Start the local PostgreSQL database with Docker Desktop running:
+For full browser checks on Windows with Microsoft Edge installed, keep the API and frontend running:
 
 ```sh
-docker compose up -d --wait db
-npm run db:seed
-npm run test:database
+npm run setup:browser
+npm run test:e2e
 ```
 
-The SQL migration in `database/migrations/` initializes the route catalog in an empty Docker volume. It is not connected to the frontend yet. See [database and backend direction](docs/database.md) for connection details, the schema, and the planned Python FastAPI API.
+The setup command downloads development tooling into ignored `.qa/` through the backend image. It uses installed Edge and does not install a browser. `BROWSER_EXECUTABLE` and `FRONTEND_URL` can override the defaults. On other platforms, install Playwright into `.qa/browser` and set an installed Chromium executable. Browser checks exercise nine preference/time combinations, walk/ride/tight budgets, reporting, empty/error/retry states, map overlays, desktop scrolling, and narrow web layouts. They remove their own reports and save screenshots under `.qa/screenshots/`.
 
-`db:seed` applies pending migrations to the existing local database and upserts the demo fixtures. It can be rerun without duplicating rows. Every fixture value is estimated and unverified; no seed row is a verified transport service or a live PickMe quote.
+## Behavior and data
+
+- Buckets are calculated in Asia/Colombo; weekend takes precedence over night.
+- Each segment has hand-set, estimated traffic multipliers, waits, and crowd levels.
+- GPS walking uses haversine distance times `1.3` and estimated walking speed `4.5 km/h`.
+- The nearest boardable stop must precede the drop-off in the same route pattern.
+- Cost, time, crowd, and walking are normalized to `0-1` across eligible options, then weighted by preference. Lower scores rank first; ties use the option ID.
+- Options fitting the available minutes rank ahead of options that exceed them. If none fit, the app says so.
+- Savings are calculated from the full-ride option in the same data snapshot.
+- A report younger than 30 minutes overrides that bus leg's crowd estimate. Future reports and reports exactly 30 minutes old are excluded.
+- Reproducibility means identical origin, destination, preference, budget, time, and database snapshot. Responses return the resolved time and a data fingerprint. New reports are a new data input.
+
+See [database setup](docs/database.md), [source-status sheet](docs/data-sources.md), and [rule details and roadmap](docs/rules.md).
+
+## Stop locally
+
+Stop Vite with Ctrl+C. Stop the containers while keeping data:
+
+```sh
+docker compose down
+```
+
+Do not add `--volumes` if you want to retain the data. `db:seed` applies pending local migrations and upserts demo fixtures without deleting reports. Applied migrations are checksum-tracked; add a new migration instead of editing one that has been applied.
+
+## Git workflow
+
+`main` remains the previous demo release. Completed, tested work is integrated into local `develop`. Each requested group has its own branch: `feat/seed-data`, `feat/engine`, `feat/api-rules`, `feat/web`, `feat/crowd-reports`, and `chore/finish`.
+
+Conventional commits use the configured `iamthisal` identity. Feature tests accompany their feature commits. This work is local only: no push and no deployment.
