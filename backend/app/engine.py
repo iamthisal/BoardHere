@@ -32,9 +32,18 @@ def rank_options(options: list[dict], preference: str) -> list[dict]:
     return sorted(ranked, key=lambda option: (option['score'], option['id']))
 
 
+def fresh_reports(reports: list[dict], now: datetime) -> dict:
+    valid = [r for r in reports if 0 <= (now-r['reported_at']).total_seconds() < 1800]
+    latest = {}
+    for report in sorted(valid, key=lambda r: (-r['reported_at'].timestamp(), str(r['id']))):
+        latest.setdefault(report['leg_id'], report)
+    return latest
+
+
 def estimate_options(catalog: dict, now: datetime, origin: dict | None = None) -> list[dict]:
     bucket = get_time_bucket(now)
     profiles = {(p['leg_id'], p['bucket']): p for p in catalog['profiles']}
+    reports = fresh_reports(catalog.get('reports', []), now)
     stops = {str(s['id']): s for s in catalog['stops']}
     reference = next(s for s in catalog['stops'] if s['slug'] == 'orion-city')
     origin = origin or reference
@@ -62,6 +71,7 @@ def estimate_options(catalog: dict, now: datetime, origin: dict | None = None) -
             profile = profiles.get((raw['id'], bucket))
             if profile is None:
                 raise ValueError(f"Missing time profile for {raw['id']} / {bucket}")
+            report = reports.get(raw['id']) if raw['mode'] == 'bus' else None
             vehicle = float(raw['base_minutes']) * float(profile['in_vehicle_multiplier'])
             walk_km = 0.0
             if raw['mode'] == 'walk':
@@ -78,7 +88,8 @@ def estimate_options(catalog: dict, now: datetime, origin: dict | None = None) -
                 'pattern_id': str(raw['pattern_id']) if raw['pattern_id'] else None,
                 'cost_lkr': float(raw['cost_lkr']), 'in_vehicle_minutes': round(vehicle, 2),
                 'wait_minutes': float(profile['wait_minutes']), 'walk_km': round(walk_km, 3),
-                'crowd_level': profile['crowd_level'], 'crowd_source': 'estimated (rule-based)',
+                'crowd_level': report['crowd_level'] if report else profile['crowd_level'],
+                'crowd_source': 'Unverified passenger report (estimated)' if report else 'estimated (rule-based)',
                 'data_status': 'estimated', 'source': raw['source'], 'profile_source': profile['source'],
             })
         if not legs:
@@ -93,5 +104,6 @@ def estimate_options(catalog: dict, now: datetime, origin: dict | None = None) -
             'crowd_level': next(k for k, v in CROWD.items() if k != 'not_applicable' and v == crowd)
                 if any(l['mode'] == 'bus' for l in legs) else 'not_applicable',
             'bucket': bucket, 'data_status': 'estimated', 'source': option['source'], 'legs': legs,
+            'crowd_source': 'Unverified passenger report + estimated rules' if any(l['id'] in reports for l in legs) else 'estimated (rule-based)',
         })
     return results

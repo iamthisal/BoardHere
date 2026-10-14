@@ -8,15 +8,20 @@ def get_stops():
     """)
 
 
-def get_catalog(destination: str) -> dict:
-    return database.snapshot({
+def get_catalog(destination: str, now=None) -> dict:
+    queries = {
         'stops': ("select id, slug, name, latitude as lat, longitude as lng, kind, data_status, source from boardhere.stops where slug is not null order by slug", ()),
         'options': ("""select o.* from boardhere.journey_options o join boardhere.stops s on s.id=o.destination_id
             where o.active and (s.slug=%s or s.id::text=%s) order by o.id""", (destination, destination)),
         'legs': ("select * from boardhere.journey_legs order by option_id, sequence", ()),
         'profiles': ("select * from boardhere.route_time_profile order by leg_id, bucket", ()),
         'route_stops': ("select * from boardhere.route_stops order by pattern_id, sequence", ()),
-    })
+    }
+    if now is not None:
+        queries['reports'] = ("""select id, leg_id, crowd_level, reported_at, data_status, source
+            from boardhere.crowd_reports where reported_at<=%s and reported_at>%s - interval '30 minutes'
+            order by reported_at desc, id asc""", (now, now))
+    return database.snapshot(queries)
 
 
 def option_destination(option_id: str) -> str | None:
